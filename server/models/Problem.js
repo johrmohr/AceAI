@@ -8,10 +8,12 @@ const problemSchema = new mongoose.Schema({
   examples: { type: Array, required: true },
   constraints: { type: Array, required: true },
   starter_code: { type: Object, required: true },
-  public_test_cases: { type: Array, required: true }, // Visible to users
-  hidden_test_cases: { type: Array, required: true, select: false } // Only for backend validation
+  // This field isn't used yet, so we'll make it optional
+  public_test_cases: { type: Array, required: false }, 
+  // This is the field we will use for validation
+  hidden_test_cases: { type: Array, required: true, select: false } 
 });
 
 const Problem = mongoose.model('Problem', problemSchema);
 
-module.exports = Problem; 
+module.exports = Problem;
