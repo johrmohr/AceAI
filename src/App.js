@@ -1,5 +1,5 @@
 /* App.js */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import './App.css';
 
@@ -46,7 +46,6 @@ const ResultsDisplay = ({ validationResults }) => {
 // --- Main App Component ---
 function App() {
   const [language, setLanguage] = useState('python');
-  const editorContainerRef = useRef(null);
   const [code, setCode] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [problem, setProblem] = useState(null);
@@ -59,32 +58,6 @@ function App() {
     { value: 'javascript', label: 'JavaScript' },
     { value: 'python', label: 'Python' },
   ];
-
-  const animationFrameRef = useRef(null);
-
-  const handleEditorDidMount = (editor, monaco) => {
-    const editorContainer = editorContainerRef.current;
-    if (!editorContainer) return;
-
-    const updateHeight = () => {
-      const contentHeight = Math.min(1000, editor.getContentHeight());
-      const currentHeight = editorContainer.offsetHeight;
-
-      if (currentHeight !== contentHeight) {
-        editorContainer.style.height = `${contentHeight}px`;
-      }
-    };
-
-    editor.onDidContentSizeChange(() => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      animationFrameRef.current = requestAnimationFrame(updateHeight);
-    });
-
-    // Initial resize
-    updateHeight();
-  };
 
   useEffect(() => {
     const fetchRandomProblem = async () => {
@@ -207,22 +180,21 @@ function App() {
             {isRunning ? 'Running...' : 'Run Code'}
             </button>
         </div>
-        <div className="editor-wrapper" ref={editorContainerRef}>
+        <div className="editor-wrapper">
             <Editor
-                height="100%"
+                height="400px"
                 language={language}
                 value={code}
                 onChange={(value) => setCode(value || '')}
                 theme="vs-dark"
-                onMount={handleEditorDidMount} // Add the onMount handler
                 options={{
+                  automaticLayout: true,
                   minimap: { enabled: false },
                   fontSize: 14,
                   wordWrap: 'on',
                   scrollBeyondLastLine: false,
                   scrollbar: {
-                    vertical: 'hidden',
-                    handleMouseWheel: false, // Pass scroll events to the parent
+                    alwaysConsumeMouseWheel: false,
                   },
                 }}
             />
