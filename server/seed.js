@@ -1,3 +1,4 @@
+/* seed.js */
 const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const Problem = require('./models/Problem');
