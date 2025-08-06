@@ -50,11 +50,12 @@ function App() {
   const [dialogue, setDialogue] = useState("Welcome to your mock interview! Let's start with the first coding challenge.");
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [isInterviewPaused, setIsInterviewPaused] = useState(false);
-  const [liveFeedback, setLiveFeedback] = useState('Your feedback will appear here...');
+  const [liveFeedback, setLiveFeedback] = useState('');
   const [transcript, setTranscript] = useState('');
   const mediaStreamRef = useRef(null);
   const wsRef = useRef(null);
   const recorderRef = useRef(null);
+  const feedbackIntervalRef = useRef(null);
 
   const languageOptions = [
     { value: 'javascript', label: 'JavaScript' },
@@ -83,6 +84,59 @@ function App() {
     };
     fetchRandomProblem();
   }, []);
+
+  const fetchAIFeedback = async () => {
+    if (!problem) {
+      console.log("Skipping feedback: problem not loaded yet.");
+      return;
+    }
+    const currentCode = code;
+    const currentTranscript = transcript;
+
+    console.log("Fetching AI feedback with data:", {
+      code: currentCode,
+      transcript: currentTranscript,
+      problemId: problem.problem_id,
+    });
+
+    try {
+        const response = await fetch('http://localhost:5001/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                code: currentCode,
+                transcript: currentTranscript,
+                problemId: problem.problem_id,
+            }),
+        });
+        
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            throw new Error(responseData.message || 'Failed to fetch AI feedback.');
+        }
+
+        console.log("Received data from feedback API:", responseData);
+        const { feedback } = responseData;
+        setLiveFeedback(feedback);
+
+    } catch (error) {
+        console.error("Error fetching AI feedback:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (isInterviewStarted && !isInterviewPaused) {
+      feedbackIntervalRef.current = setInterval(fetchAIFeedback, 15000);
+    } else {
+      clearInterval(feedbackIntervalRef.current);
+    }
+
+    return () => {
+      clearInterval(feedbackIntervalRef.current);
+    };
+  }, [isInterviewStarted, isInterviewPaused]);
+
 
   const handleLanguageChange = (event) => {
     const newLanguage = event.target.value;

@@ -17,6 +17,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/problems', require('./routes/problems'));
+app.use('/api/feedback', require('./routes/feedback'));
 
 // Basic route for testing
 app.get('/', (req, res) => {
