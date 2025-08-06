@@ -1,7 +1,10 @@
 /* server.js */
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/database');
+const WebSocket = require('ws');
+const { setupSpeechRecognition } = require('./config/speechService');
 
 const app = express();
 
@@ -22,6 +25,22 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 
-app.listen(PORT, () => {
+// Create a WebSocket server
+const wss = new WebSocket.Server({ noServer: true });
+
+// Handle WebSocket connections
+wss.on('connection', (ws) => {
+  console.log('WebSocket connection established');
+  setupSpeechRecognition(ws);
+});
+
+// Upgrade HTTP server to handle WebSocket connections
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-}); 
+});
+
+server.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
