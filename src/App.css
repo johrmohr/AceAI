@@ -24,6 +24,55 @@ body {
   z-index: 1000;
 }
 
+/* Full-screen loading overlay for final feedback */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  backdrop-filter: blur(4px);
+}
+
+.loading-box {
+  background-color: #252526;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  border: 1px solid #444;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  color: #e2e2e2;
+  text-align: center;
+}
+
+/* Final feedback full-page layout */
+.final-feedback-page {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.final-feedback-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.final-feedback-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .interview-start-box, .interview-resume-box {
   background-color: #252526;
   padding: 3rem 4rem;
@@ -37,6 +86,10 @@ body {
   margin-top: 0;
   color: #fff;
   font-size: 2rem;
+}
+
+.interview-start-box .interview-button {
+  margin-top: 1.5rem;
 }
 
 .interview-start-box p {
@@ -98,24 +151,9 @@ body {
 }
 
 /* --- Buttons --- */
-.start-interview-button, .resume-interview-button {
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-  color: white;
-  font-size: 1.2rem;
-  padding: 0.8rem 1.8rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
 
-.start-interview-button:hover, .resume-interview-button:hover {
-  background: linear-gradient(135deg, #2575fc 0%, #6a11cb 100%);
-  transform: scale(1.05);
-}
 
-.pause-interview-button {
+.interview-button {
   background: #555;
   color: white;
   font-size: 1rem;
@@ -125,39 +163,83 @@ body {
   cursor: pointer;
   transition: background 0.3s ease, transform 0.3s ease;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.pause-interview-button:hover {
+.button-style:hover {
   background: #666;
   transform: scale(1.05);
 }
 
-.run-button {
-  background-color: #444;
-  color: white;
-  border: 1px solid #666;
-  border-radius: 4px;
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
-  font-size: 0.9rem;
+
+
+.dialogue-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: 1rem;
 }
 
-.run-button:hover:not(:disabled) {
-  background-color: #555;
+/* Center buttons in overlays like end-interview confirmation */
+.interview-resume-overlay .dialogue-buttons {
+  justify-content: center;
 }
 
-.run-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+.header {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+}
+
+.timer-display {
+  background-color: #252526;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.loader {
+  width: 1rem;
+  height: 1rem;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* --- Right Panel --- */
 .right-panel {
   flex: 0 0 70%;
   height: 100vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column; /* Organizes problem and editor vertically */
   padding: 1.5rem;
   box-sizing: border-box;
+  overflow-y: auto; /* Enable scrolling for the entire right panel */
+}
+
+.problem-area {
+  flex: none; /* Content defines height */
+  overflow-y: visible; /* Avoid nested scroll; let right panel handle it */
+  padding-right: 1.5rem; /* Adds spacing between problem and editor */
+  border-bottom: 2px solid #333; /* Separator line */
+}
+
+.editor-area {
+  flex: 1; /* Takes up available space */
+  display: flex;
+  flex-direction: column;
 }
 
 .problem-header {
@@ -165,6 +247,12 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+}
+
+.problem-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .problem-header h2 {
@@ -182,6 +270,42 @@ body {
 .difficulty.medium { background-color: #e9c46a; color: #333; }
 .difficulty.hard { background-color: #e76f51; color: white; }
 
+.problem-description {
+  line-height: 1.8;
+  font-size: 1.05rem;
+  color: #e2e2e2;
+  background-color: #262626;
+  padding: 1.25rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid #343434;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.problem-description p {
+  margin: 0 0 0.75rem;
+}
+
+.problem-description p:last-child {
+  margin-bottom: 0;
+}
+
+.problem-description strong {
+  font-weight: 700;
+}
+
+.problem-description .inline-token {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 8px;
+  background: #333;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.92em;
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+
 .example pre {
   background-color: #2D2D2D;
   padding: 1rem;
@@ -191,16 +315,71 @@ body {
   font-family: 'Courier New', Courier, monospace;
 }
 
+/* --- Examples --- */
+.examples-section {
+  margin-top: 1rem;
+}
+
+.example {
+  margin: 1rem 0 1.25rem;
+}
+
+.example-header {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.example-block {
+  background-color: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.example-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.35rem 0;
+}
+
+.example-label {
+  font-weight: 700;
+}
+
+.inline-code {
+  background: #1f1f1f;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  color: #f5f5f5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* --- Constraints --- */
+.constraints-title {
+  margin-top: 1rem;
+}
+
+.constraints-list {
+  margin: 0.25rem 0 1rem 1.2rem;
+}
+
+.constraints-list li {
+  margin: 0.35rem 0;
+}
+
 /* --- Editor & Results --- */
 .editor-controls {
   display: flex;
   align-items: center;
   padding: 1rem 0;
-  margin-top: 1.5rem;
   gap: 1rem;
   border-top: 1px solid #333;
   border-bottom: 1px solid #333;
 }
+
+/* Final feedback tweaks reuse existing blocks; no extra classes required */
 
 select {
   background-color: #444;
@@ -212,9 +391,20 @@ select {
   font-size: 0.9rem;
 }
 
+/* Hidden measurer for dynamic width select */
+.select-measure {
+  position: absolute;
+  visibility: hidden;
+  white-space: nowrap;
+  top: -9999px;
+  left: -9999px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+}
+
 .editor-wrapper {
-  height: 400px;
   margin: 1rem 0;
+  /* Let editor auto-size; no fixed min-height so parent controls scroll */
 }
 
 .output-container {
