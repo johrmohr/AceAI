@@ -27,14 +27,10 @@ body {
 /* Full-screen loading overlay for final feedback */
 .loading-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   z-index: 1100;
   backdrop-filter: blur(4px);
 }
@@ -47,6 +43,10 @@ body {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
   color: #e2e2e2;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Final feedback full-page layout */
