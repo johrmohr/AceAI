@@ -1,5 +1,4 @@
 /* server/config/speechService.js */
-require('dotenv').config({ path: '../.env' });
 const sdk = require('microsoft-cognitiveservices-speech-sdk');
 const { PassThrough } = require('stream');
 

@@ -1,10 +1,14 @@
 /* database.js */
 const mongoose = require('mongoose');
 
-const MONGODB_URI = 'MONGODB_URI_REMOVED';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 const connectDB = async () => {
   try {
+    if (!MONGODB_URI) {
+      throw new Error('MONGODB_URI is not set. Please configure it in environment variables.');
+    }
+
     const conn = await mongoose.connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -17,4 +21,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = connectDB; 
+module.exports = connectDB;

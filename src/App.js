@@ -40,6 +40,16 @@ const ResultsDisplay = ({ validationResults }) => {
 
 // --- Main App Component ---
 function App() {
+  // --- Deployment configuration (env-driven) ---
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+  const WS_URL = (() => {
+    if (process.env.REACT_APP_WS_URL) return process.env.REACT_APP_WS_URL;
+    if (API_BASE_URL) {
+      try { return API_BASE_URL.replace(/^http/i, 'ws'); } catch (_) {}
+    }
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${protocol}://${window.location.host}`;
+  })();
   const [language, setLanguage] = useState('python');
   const [code, setCode] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -192,7 +202,7 @@ function App() {
   useEffect(() => {
     const fetchProblems = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/problems');
+        const response = await fetch(`${API_BASE_URL}/api/problems`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const problems = await response.json();
         setAllProblems(problems);
@@ -262,7 +272,7 @@ function App() {
         problemId: problem.problem_id,
       });
 
-      const response = await fetch('http://localhost:5001/api/feedback', {
+      const response = await fetch(`${API_BASE_URL}/api/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -295,7 +305,7 @@ function App() {
     if (!problem || isFetchingFinalFeedback) return;
     setIsFetchingFinalFeedback(true);
     try {
-      const response = await fetch('http://localhost:5001/api/feedback/final', {
+      const response = await fetch(`${API_BASE_URL}/api/feedback/final`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -339,7 +349,7 @@ function App() {
     setValidationResults(null);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:5001/api/problems/${problem.problem_id}/validate`, {
+      const response = await fetch(`${API_BASE_URL}/api/problems/${problem.problem_id}/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, language }),
@@ -363,7 +373,7 @@ function App() {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaStreamRef.current = stream;
 
-            const ws = new WebSocket('ws://localhost:5001');
+            const ws = new WebSocket(WS_URL);
             wsRef.current = ws;
 
             ws.onopen = () => {
