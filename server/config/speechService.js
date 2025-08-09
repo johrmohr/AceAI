@@ -4,12 +4,17 @@ const { PassThrough } = require('stream');
 
 const subscriptionKey = process.env.AZURE_SPEECH_KEY;
 const serviceRegion = process.env.AZURE_SPEECH_REGION;
-
-if (!subscriptionKey || !serviceRegion) {
-    throw new Error('Azure Speech Key or Region is not set in the environment variables.');
-}
+const isSpeechConfigured = Boolean(subscriptionKey && serviceRegion);
 
 const setupSpeechRecognition = (ws) => {
+    if (!isSpeechConfigured) {
+        console.warn('Azure Speech not configured. Skipping speech recognition setup.');
+        try {
+            ws.send(JSON.stringify({ type: 'error', message: 'Speech recognition is not configured on the server.' }));
+        } catch (_) {}
+        try { ws.close(); } catch (_) {}
+        return;
+    }
     const pushStream = sdk.AudioInputStream.createPushStream(sdk.AudioStreamFormat.getWaveFormat(16000, 16, 1));
 
     const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
@@ -73,4 +78,4 @@ const setupSpeechRecognition = (ws) => {
     });
 };
 
-module.exports = { setupSpeechRecognition };
+module.exports = { setupSpeechRecognition, isSpeechConfigured };

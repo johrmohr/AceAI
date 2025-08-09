@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const WebSocket = require('ws');
-const { setupSpeechRecognition } = require('./config/speechService');
+const { setupSpeechRecognition, isSpeechConfigured } = require('./config/speechService');
 
 const app = express();
 
@@ -38,6 +38,9 @@ wss.on('connection', (ws) => {
 // Upgrade HTTP server to handle WebSocket connections
 const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  if (!isSpeechConfigured) {
+    console.warn('Azure Speech keys not set. WebSocket speech recognition will be disabled.');
+  }
 });
 
 server.on('upgrade', (request, socket, head) => {

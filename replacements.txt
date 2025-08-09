@@ -1,0 +1,4 @@
+cat > replacements.txt << 'EOF'
+mongodb+srv://jormor64:chickenZ15.@aceai.wrermpn.mongodb.net/?retryWrites=true&w=majority&appName=AceAI==>MONGODB_URI_REMOVED
+mongodb+srv://jormor64:chickenZ15.@aceai.wrermpn.mongodb.net/==>MONGODB_URI_REMOVED
+EOF
