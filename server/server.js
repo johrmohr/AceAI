@@ -18,6 +18,8 @@ app.use(express.json());
 // Routes
 app.use('/api/problems', require('./routes/problems'));
 app.use('/api/feedback', require('./routes/feedback'));
+app.use('/api/tts', require('./routes/tts'));
+app.use('/api/qna', require('./routes/qna'));
 
 // Basic route for testing
 app.get('/', (req, res) => {

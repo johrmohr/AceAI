@@ -59,12 +59,14 @@ function App() {
   const [validationResults, setValidationResults] = useState(null);
   const [dialogue, setDialogue] = useState([]);
   const [currentDialogue, setCurrentDialogue] = useState('');
+  const [isOpeningPlaying, setIsOpeningPlaying] = useState(false);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [isInterviewPaused, setIsInterviewPaused] = useState(false);
   const [isFetchingHint, setIsFetchingHint] = useState(false);
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [timer, setTimer] = useState(1800);
   const [editorHeight, setEditorHeight] = useState(300);
+  const [audioAllowed, setAudioAllowed] = useState(false);
 
   const [hints, setHints] = useState([]);
   const [liveFeedback, setLiveFeedback] = useState('');
@@ -80,11 +82,20 @@ function App() {
   const wsRef = useRef(null);
   const recorderRef = useRef(null);
   const feedbackIntervalRef = useRef(null);
+  const transcriptRef = useRef('');
+  const currentAudioRef = useRef(null);
+  const cancelCurrentPlaybackRef = useRef(null);
+  const skipRequestedRef = useRef(false);
+  const lastQuestionTimeRef = useRef(0);
+  const lastAnsweredQuestionRef = useRef('');
+  const isAnsweringRef = useRef(false);
+  const lastTranscriptAtRef = useRef(0);
+  const lastProcessedLenRef = useRef(0);
+  const pendingQuestionsRef = useRef([]);
+  const processedQuestionsSetRef = useRef(new Set());
+  const audioUnlockedRef = useRef(false);
 
   const dialogues = [
-    "Welcome to your mock interview! We're going to start with a coding challenge.",
-    "The problem is now visible on your screen. Please read it carefully, and then explain your thought process as you work through the solution.",
-    "Remember to think out loud. It helps me understand how you approach problem-solving.",
     "You're about halfway through your allotted time. How are you feeling about your progress?",
     "You have about five minutes left. Is there anything you'd like to wrap up or finalize?",
     "Time is up. Let's discuss your solution."
@@ -155,14 +166,155 @@ function App() {
     return html;
   };
 
+  // Opening dialogue: synthesize and play with text sync
   useEffect(() => {
-    if (isInterviewStarted) {
-      setCurrentDialogue(dialogues[0]);
-    }
+    if (!isInterviewStarted) return;
+    let cancelled = false;
+    skipRequestedRef.current = false;
+
+    const playLineWithSync = async (text) => {
+      setCurrentDialogue('');
+      // Try timestamps first; if it fails, fall back to plain MP3
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voiceName: 'Alice', withTimestamps: true, output_format: 'mp3_44100_128' }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const audioBase64 = data?.audio_base64;
+          const alignment = data?.alignment;
+          // If alignment is missing/null but audio exists, still play (no char update)
+          if (audioBase64 && alignment && Array.isArray(alignment.characters) && Array.isArray(alignment.character_end_times_seconds)) {
+            const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+            audio.preload = 'auto';
+            audio.playsInline = true;
+            currentAudioRef.current = audio;
+            const charsArray = alignment.characters;
+            const charEnds = alignment.character_end_times_seconds;
+            await new Promise((resolve) => {
+              let rafId = null;
+              const cleanup = () => { if (rafId) cancelAnimationFrame(rafId); rafId = null; };
+              const tick = () => {
+                const t = audio.currentTime || 0;
+                let idx = -1;
+                for (let i = 0; i < charEnds.length; i++) { if ((charEnds[i] || 0) <= t) idx = i; else break; }
+                if (idx >= 0) setCurrentDialogue(charsArray.slice(0, idx + 1).join(''));
+                rafId = requestAnimationFrame(tick);
+              };
+              const onEnded = () => { setCurrentDialogue(text); cleanup(); resolve(true); };
+              const onError = () => { cleanup(); resolve(true); };
+              // Allow external cancel
+              cancelCurrentPlaybackRef.current = () => { try { audio.pause(); } catch (_) {} cleanup(); resolve(true); };
+              audio.addEventListener('ended', onEnded);
+              audio.addEventListener('error', onError);
+              audio.addEventListener('playing', () => { if (!rafId) rafId = requestAnimationFrame(tick); });
+              audio.play().catch(() => {
+                const onCanPlay = () => {
+                  try { audio.play().catch(() => {}); } catch (_) {}
+                  audio.removeEventListener('canplay', onCanPlay);
+                };
+                audio.addEventListener('canplay', onCanPlay);
+              });
+            });
+            return;
+          }
+          if (audioBase64) {
+            // Play without alignment update
+            const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+            audio.preload = 'auto';
+            audio.playsInline = true;
+            currentAudioRef.current = audio;
+            await new Promise((resolve) => {
+              const onEnded = () => { setCurrentDialogue(text); resolve(true); };
+              const onError = () => { resolve(true); };
+              cancelCurrentPlaybackRef.current = () => { try { audio.pause(); } catch (_) {} resolve(true); };
+              audio.addEventListener('ended', onEnded);
+              audio.addEventListener('error', onError);
+              audio.play().catch(() => {});
+            });
+            return;
+          }
+        }
+      } catch (_) { /* fall through */ }
+
+      // Plain MP3 fallback with proportional word sync
+      try {
+        const res2 = await fetch(`${API_BASE_URL}/api/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voiceName: 'Alice', withTimestamps: false, output_format: 'mp3_44100_128' }),
+        });
+        if (!res2.ok) throw new Error('mp3 fallback failed');
+        const blob = await res2.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.preload = 'auto';
+        audio.playsInline = true;
+        currentAudioRef.current = audio;
+        const words = text.split(/\s+/);
+        await new Promise((resolve) => {
+          let rafId = null;
+          const cleanup = () => { if (rafId) cancelAnimationFrame(rafId); rafId = null; try { URL.revokeObjectURL(url); } catch (_) {} };
+          const tick = () => {
+            const t = audio.currentTime || 0;
+            const d = audio.duration || 0;
+            if (d > 0) {
+              const idx = Math.max(1, Math.min(words.length, Math.ceil((t / d) * words.length)));
+              setCurrentDialogue(words.slice(0, idx).join(' '));
+            }
+            rafId = requestAnimationFrame(tick);
+          };
+          const onEnded = () => { setCurrentDialogue(text); cleanup(); resolve(true); };
+          const onError = () => { cleanup(); resolve(true); };
+          cancelCurrentPlaybackRef.current = () => { try { audio.pause(); } catch (_) {} cleanup(); resolve(true); };
+          audio.addEventListener('ended', onEnded);
+          audio.addEventListener('error', onError);
+          audio.addEventListener('playing', () => { if (!rafId) rafId = requestAnimationFrame(tick); });
+          audio.play().catch(() => { if (!rafId) rafId = requestAnimationFrame(tick); });
+        });
+        return;
+      } catch (_) { /* fall through */ }
+
+      // Last resort: timed progressive reveal
+      try {
+        const words = text.split(/\s+/);
+        for (let i = 1; i <= words.length; i++) {
+          setCurrentDialogue(words.slice(0, i).join(' '));
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise(r => setTimeout(r, 60));
+        }
+      } catch (_) {}
+    };
+
+    const start = async () => {
+      setIsOpeningPlaying(true);
+      const openingLines = [
+        "Hello, and welcome to your simulated coding interview. My name is Alice, and I'll be your interviewer today.",
+        "Thanks for coming in. We're going to spend about 30 minutes together. We'll move into a coding problem, and we'll have some time for your questions at the end.",
+        "The goal of this session is to see how you approach problems, not just to see if you can get the perfect answer. I'm here to see your thought process, so please think out loud as much as you can.",
+        "Don't worry about minor syntax errors; focus on the logic and the overall structure of your solution. Feel free to ask clarifying questions about the problem at any point.",
+        `Today you're coding problem will be ${problem?.title || 'the selected problem'}, feel free to start whenever you're ready.`,
+      ];
+      for (const line of openingLines) {
+        if (cancelled) break;
+        if (skipRequestedRef.current) break;
+        setCurrentDialogue('');
+        await playLineWithSync(line);
+        if (cancelled) break;
+        if (skipRequestedRef.current) break;
+        setDialogue(prev => [...prev, line]);
+      }
+      if (!cancelled) setIsOpeningPlaying(false);
+    };
+
+    start();
+    return () => { cancelled = true; };
   }, [isInterviewStarted]);
 
   useEffect(() => {
-    if (!isInterviewStarted || isInterviewPaused) return;
+    if (!isInterviewStarted || isInterviewPaused || isOpeningPlaying) return;
 
     const interval = setInterval(() => {
       setTimer(prev => {
@@ -170,18 +322,18 @@ function App() {
         if (newTime <= 0) {
           clearInterval(interval);
           handleStopInterview();
-          setCurrentDialogue(dialogues[5]);
+          setCurrentDialogue(dialogues[2]);
           return 0;
         }
 
         if (newTime === 15 * 60) {
-          setCurrentDialogue(dialogues[3]);
+          setCurrentDialogue(dialogues[0]);
         } else if (newTime === 5 * 60) {
-          setCurrentDialogue(dialogues[4]);
-        } else if (newTime === 29 * 60 + 55) {
           setCurrentDialogue(dialogues[1]);
+        } else if (newTime === 29 * 60 + 55) {
+          // intro prompt to read problem – already handled by opening speech
         } else if (newTime === 29 * 60) {
-          setCurrentDialogue(dialogues[2]);
+          // think out loud – already set by opening speech
         }
 
 
@@ -368,8 +520,107 @@ function App() {
     }
   };
 
+  // Question detection: batch answers after 1.5s of silence
+  useEffect(() => {
+    if (!isInterviewStarted) return;
+    const intervalId = setInterval(async () => {
+      if (isOpeningPlaying) return;
+      const now = Date.now();
+      // If we haven't received transcript for 1500ms and there are pending questions, answer them as a batch
+      if (pendingQuestionsRef.current.length > 0 && now - lastTranscriptAtRef.current > 1500 && !isAnsweringRef.current) {
+        const batch = pendingQuestionsRef.current.splice(0);
+        const combined = batch.join(' ');
+        try {
+          isAnsweringRef.current = true;
+          const res = await fetch(`${API_BASE_URL}/api/qna`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: combined, problemId: problem?.problem_id }),
+          });
+          const data = await res.json();
+          const answer = data?.answer || '';
+          if (!answer) return;
+          const ttsRes = await fetch(`${API_BASE_URL}/api/tts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: answer, voiceName: 'Alice', withTimestamps: true, output_format: 'mp3_44100_128' }),
+          });
+          if (ttsRes.ok) {
+            const ttsData = await ttsRes.json();
+            const { audio_base64, alignment } = ttsData || {};
+            const audio = new Audio(`data:audio/mp3;base64,${audio_base64}`);
+            const words = answer.split(/\s+/);
+            let wordTimings = [];
+            if (alignment && Array.isArray(alignment.characters)) {
+              const chars = alignment.characters;
+              const starts = alignment.character_start_times_seconds || [];
+              const ends = alignment.character_end_times_seconds || [];
+              let currentWord = '';
+              let currentStart = null;
+              for (let i = 0; i < chars.length; i++) {
+                const ch = chars[i];
+                const s = starts[i] ?? null;
+                const e = ends[i] ?? null;
+                if (ch && ch.match(/\s/)) {
+                  if (currentWord.trim().length > 0 && currentStart != null && e != null) {
+                    wordTimings.push({ word: currentWord.trim(), start: currentStart, end: e });
+                  }
+                  currentWord = '';
+                  currentStart = null;
+                } else {
+                  if (currentStart == null && s != null) currentStart = s;
+                  currentWord += ch;
+                }
+              }
+              if (currentWord.trim().length > 0 && currentStart != null) {
+                const lastEnd = ends[ends.length - 1] ?? currentStart;
+                wordTimings.push({ word: currentWord.trim(), start: currentStart, end: lastEnd });
+              }
+            }
+            const update = () => {
+              if (!Array.isArray(wordTimings) || wordTimings.length === 0) return;
+              const t = audio.currentTime || 0;
+              let count = 0;
+              for (let i = 0; i < wordTimings.length; i++) {
+                if (wordTimings[i].end <= t) count++;
+                else break;
+              }
+              setCurrentDialogue(words.slice(0, Math.min(count + 1, words.length)).join(' '));
+            };
+            audio.addEventListener('timeupdate', update);
+            audio.addEventListener('ended', () => setCurrentDialogue(answer));
+            audio.play().catch(() => {});
+          } else {
+            setCurrentDialogue(answer);
+          }
+        } catch (_) {
+          // ignore transient errors
+        } finally {
+          isAnsweringRef.current = false;
+        }
+      }
+    }, 300);
+    return () => clearInterval(intervalId);
+  }, [API_BASE_URL, isInterviewStarted, isOpeningPlaying, problem?.problem_id]);
+
     const handleStartInterview = async () => {
         try {
+            // Attempt to unlock audio on user gesture
+            try {
+                if (!audioUnlockedRef.current) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        const ctx = new AudioCtx();
+                        const buffer = ctx.createBuffer(1, 1, 22050);
+                        const source = ctx.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(ctx.destination);
+                        source.start(0);
+                        if (ctx.state === 'suspended') { await ctx.resume().catch(() => {}); }
+                        audioUnlockedRef.current = true;
+                    }
+                }
+            } catch (_) {}
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaStreamRef.current = stream;
 
@@ -403,7 +654,24 @@ function App() {
             ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
                 if (message.type === 'transcript') {
-                    setTranscript(prev => prev + message.data + ' ');
+                    setTranscript(prev => {
+                      const next = (prev + message.data + ' ').trim();
+                      transcriptRef.current = next;
+                      lastTranscriptAtRef.current = Date.now();
+                      try {
+                        const delta = next.slice(lastProcessedLenRef.current);
+                        const matches = delta.match(/[^?]*\?/g) || [];
+                        matches.forEach((m) => {
+                          const q = (m || '').replace(/\s+/g, ' ').trim();
+                          if (q && !processedQuestionsSetRef.current.has(q)) {
+                            pendingQuestionsRef.current.push(q);
+                            processedQuestionsSetRef.current.add(q);
+                          }
+                        });
+                        lastProcessedLenRef.current = next.length;
+                      } catch (_) {}
+                      return next + ' ';
+                    });
                 }
             };
 
@@ -418,12 +686,18 @@ function App() {
         if (recorderRef.current) {
             recorderRef.current.pauseRecording();
         }
+        if (currentAudioRef.current) {
+            try { currentAudioRef.current.pause(); } catch (_) {}
+        }
         setIsInterviewPaused(true);
     };
 
     const handleResumeInterview = () => {
         if (recorderRef.current) {
             recorderRef.current.resumeRecording();
+        }
+        if (currentAudioRef.current) {
+            try { currentAudioRef.current.play(); } catch (_) {}
         }
         setIsInterviewPaused(false);
     };
@@ -450,6 +724,10 @@ function App() {
     };
 
     const handleEndInterviewClick = () => {
+        // Pause audio like pressing pause
+        if (currentAudioRef.current) {
+            try { currentAudioRef.current.pause(); } catch (_) {}
+        }
         setShowEndConfirmation(true);
     };
 
@@ -617,12 +895,27 @@ function App() {
               <p>{currentDialogue}</p>
             </div>
             <div className="dialogue-buttons">
-              {isInterviewStarted && !isInterviewPaused && (
-                <button onClick={handlePauseInterview} className="interview-button">Pause</button>
-              )}
-              {isInterviewStarted && (
-                  <button onClick={handleEndInterviewClick} className="interview-button">End Interview</button>
-              )}
+              <div className="dialogue-left-buttons">
+                {isInterviewStarted && (
+                  <button onClick={handlePauseInterview} className="interview-button" disabled={isInterviewPaused}>Pause</button>
+                )}
+              </div>
+              <div className="dialogue-right-buttons">
+                <button onClick={() => {
+                  if (!(isInterviewStarted && isOpeningPlaying)) return;
+                  skipRequestedRef.current = true;
+                  try { cancelCurrentPlaybackRef.current && cancelCurrentPlaybackRef.current(); } catch (_) {}
+                  setIsOpeningPlaying(false);
+                  const lines = [
+                    "Hello, and welcome to your simulated coding interview. My name is Alice, and I'll be your interviewer today.",
+                    "Thanks for coming in. We're going to spend about 30 minutes together. We'll move into a coding problem, and we'll have some time for your questions at the end.",
+                    "The goal of this session is to see how you approach problems, not just to see if you can get the perfect answer. I'm here to see your thought process, so please think out loud as much as you can.",
+                    "Don't worry about minor syntax errors; focus on the logic and the overall structure of your solution. Feel free to ask clarifying questions about the problem at any point.",
+                    `Today you're coding problem will be ${problem?.title || 'the selected problem'}, feel free to start whenever you're ready.`,
+                  ];
+                  setCurrentDialogue(lines[lines.length - 1]);
+                }} className="interview-button" style={{ visibility: isInterviewStarted && isOpeningPlaying ? 'visible' : 'hidden' }}>Skip</button>
+              </div>
             </div>
           </div>
           <div className="feedback-module">
@@ -635,10 +928,13 @@ function App() {
             <button onClick={fetchAIFeedback} className="interview-button" disabled={isFetchingHint}>
               {isFetchingHint ? <div className="loader" /> : 'Get a hint'}
             </button>
+            {isInterviewStarted && (
+              <button onClick={handleEndInterviewClick} className="interview-button" style={{ marginTop: '1rem', width: '100%' }}>End Interview</button>
+            )}
           </div>
         </div>
 
-        <div className="right-panel">
+        <div className={`right-panel ${isOpeningPlaying ? 'blurred' : ''}`}>
           <div className="problem-area">
             <div className="problem-header">
               <div className="problem-title">

@@ -92,6 +92,10 @@ body {
   margin-top: 1.5rem;
 }
 
+.interview-start-box .interview-button + .interview-button {
+  margin-left: 0.5rem;
+}
+
 .interview-start-box p {
   font-size: 1.1rem;
   margin-bottom: 2rem;
@@ -177,9 +181,32 @@ body {
 
 .dialogue-buttons {
   display: flex;
+  align-items: center;
+  justify-content: flex-start;
   gap: 1rem;
   margin-top: auto;
   padding-top: 1rem;
+}
+
+.dialogue-left-buttons {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+}
+
+.dialogue-right-buttons {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+}
+
+.dialogue-left-buttons .interview-button,
+.dialogue-right-buttons .interview-button {
+  width: 100%;
+}
+
+.left-bottom-controls {
+  margin-top: 1rem;
 }
 
 /* Center buttons in overlays like end-interview confirmation */
@@ -227,6 +254,11 @@ body {
   padding: 1.5rem;
   box-sizing: border-box;
   overflow-y: auto; /* Enable scrolling for the entire right panel */
+}
+
+.right-panel.blurred {
+  filter: blur(6px);
+  pointer-events: none;
 }
 
 .problem-area {

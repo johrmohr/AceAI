@@ -113,3 +113,38 @@ Keep it specific to their approach and explanation.`;
 }
 
 module.exports.getFinalInterviewFeedback = getFinalInterviewFeedback;
+
+// --- Q&A during interview ---
+async function getAIAnswerToQuestion({ question, problem }) {
+    const { title, description, difficulty } = problem || {};
+    const system = `You are Rachel, a friendly but concise technical interviewer.
+- Keep answers short (2-4 sentences) and practical.
+- Do not reveal full solutions or code unless explicitly asked to.
+- Use ONLY the provided context about the problem and the interview environment.
+- Do NOT ask the candidate questions back. Do NOT include any follow-up questions. Answer declaratively.
+- Environment constraint: Only Python and JavaScript are supported in this interview environment. If asked about any other language (e.g., C++, Java, Go), the correct answer is that they are not supported.
+- If asked about tools, permissions, or capabilities beyond the provided environment, answer based on these constraints only.`;
+
+    const user = `Problem: ${title || ''} (${difficulty || ''})\nDescription: ${description || ''}\n\nCandidate question: ${question}`;
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: 'system', content: system },
+                { role: 'user', content: user },
+            ],
+            max_tokens: 120,
+            temperature: 0.3,
+        });
+        const content = response?.choices?.[0]?.message?.content?.trim();
+        // Hard guard: strip trailing question marks to avoid model asking back
+        const safe = (content || '').replace(/\?\s*$/,'').trim();
+        return safe || 'Let me think about that for a moment.';
+    } catch (error) {
+        console.error('Error answering question:', error);
+        return 'Sorry, I ran into an issue answering that. Please try asking again.';
+    }
+}
+
+module.exports.getAIAnswerToQuestion = getAIAnswerToQuestion;
