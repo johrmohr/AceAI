@@ -61,7 +61,6 @@ function App() {
   const [currentDialogue, setCurrentDialogue] = useState('');
   const [isOpeningPlaying, setIsOpeningPlaying] = useState(false);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
-  const [isInterviewPaused, setIsInterviewPaused] = useState(false);
   const [isFetchingHint, setIsFetchingHint] = useState(false);
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [timer, setTimer] = useState(1800);
@@ -314,7 +313,7 @@ function App() {
   }, [isInterviewStarted]);
 
   useEffect(() => {
-    if (!isInterviewStarted || isInterviewPaused || isOpeningPlaying) return;
+    if (!isInterviewStarted || isOpeningPlaying) return;
 
     const interval = setInterval(() => {
       setTimer(prev => {
@@ -342,7 +341,7 @@ function App() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isInterviewStarted, isInterviewPaused]);
+  }, [isInterviewStarted]);
 
 
 
@@ -682,25 +681,7 @@ function App() {
         }
     };
 
-    const handlePauseInterview = () => {
-        if (recorderRef.current) {
-            recorderRef.current.pauseRecording();
-        }
-        if (currentAudioRef.current) {
-            try { currentAudioRef.current.pause(); } catch (_) {}
-        }
-        setIsInterviewPaused(true);
-    };
 
-    const handleResumeInterview = () => {
-        if (recorderRef.current) {
-            recorderRef.current.resumeRecording();
-        }
-        if (currentAudioRef.current) {
-            try { currentAudioRef.current.play(); } catch (_) {}
-        }
-        setIsInterviewPaused(false);
-    };
 
     const handleStopInterview = async () => {
         if (recorderRef.current) {
@@ -724,10 +705,6 @@ function App() {
     };
 
     const handleEndInterviewClick = () => {
-        // Pause audio like pressing pause
-        if (currentAudioRef.current) {
-            try { currentAudioRef.current.pause(); } catch (_) {}
-        }
         setShowEndConfirmation(true);
     };
 
@@ -828,7 +805,7 @@ function App() {
     );
   }
 
-  const isScreenBlurred = !isInterviewStarted || isInterviewPaused;
+  const isScreenBlurred = !isInterviewStarted;
 
   return (
     <>
@@ -865,13 +842,7 @@ function App() {
         </div>
       )}
 
-      {isInterviewPaused && (
-        <div className="interview-resume-overlay">
-          <div className="interview-resume-box">
-            <button onClick={handleResumeInterview} className="interview-button">Resume</button>
-          </div>
-        </div>
-      )}
+
 
       {showEndConfirmation && (
         <div className="interview-resume-overlay">
@@ -895,27 +866,20 @@ function App() {
               <p>{currentDialogue}</p>
             </div>
             <div className="dialogue-buttons">
-              <div className="dialogue-left-buttons">
-                {isInterviewStarted && (
-                  <button onClick={handlePauseInterview} className="interview-button" disabled={isInterviewPaused}>Pause</button>
-                )}
-              </div>
-              <div className="dialogue-right-buttons">
-                <button onClick={() => {
-                  if (!(isInterviewStarted && isOpeningPlaying)) return;
-                  skipRequestedRef.current = true;
-                  try { cancelCurrentPlaybackRef.current && cancelCurrentPlaybackRef.current(); } catch (_) {}
-                  setIsOpeningPlaying(false);
-                  const lines = [
-                    "Hello, and welcome to your simulated coding interview. My name is Alice, and I'll be your interviewer today.",
-                    "Thanks for coming in. We're going to spend about 30 minutes together. We'll move into a coding problem, and we'll have some time for your questions at the end.",
-                    "The goal of this session is to see how you approach problems, not just to see if you can get the perfect answer. I'm here to see your thought process, so please think out loud as much as you can.",
-                    "Don't worry about minor syntax errors; focus on the logic and the overall structure of your solution. Feel free to ask clarifying questions about the problem at any point.",
-                    `Today you're coding problem will be ${problem?.title || 'the selected problem'}, feel free to start whenever you're ready.`,
-                  ];
-                  setCurrentDialogue(lines[lines.length - 1]);
-                }} className="interview-button" style={{ visibility: isInterviewStarted && isOpeningPlaying ? 'visible' : 'hidden' }}>Skip</button>
-              </div>
+              <button onClick={() => {
+                if (!(isInterviewStarted && isOpeningPlaying)) return;
+                skipRequestedRef.current = true;
+                try { cancelCurrentPlaybackRef.current && cancelCurrentPlaybackRef.current(); } catch (_) {}
+                setIsOpeningPlaying(false);
+                const lines = [
+                  "Hello, and welcome to your simulated coding interview. My name is Alice, and I'll be your interviewer today.",
+                  "Thanks for coming in. We're going to spend about 30 minutes together. We'll move into a coding problem, and we'll have some time for your questions at the end.",
+                  "The goal of this session is to see how you approach problems, not just to see if you can get the perfect answer. I'm here to see your thought process, so please think out loud as much as you can.",
+                  "Don't worry about minor syntax errors; focus on the logic and the overall structure of your solution. Feel free to ask clarifying questions about the problem at any point.",
+                  `Today you're coding problem will be ${problem?.title || 'the selected problem'}, feel free to start whenever you're ready.`,
+                ];
+                setCurrentDialogue(lines[lines.length - 1]);
+              }} className="interview-button" style={{ visibility: isInterviewStarted && isOpeningPlaying ? 'visible' : 'hidden', width: '100%' }}>Skip</button>
             </div>
           </div>
           <div className="feedback-module">

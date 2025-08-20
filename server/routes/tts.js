@@ -15,9 +15,18 @@ const ELEVEN_API_KEY = pickKey();
 const ELEVEN_BASE_URL = 'https://api.elevenlabs.io/v1';
 const DEFAULT_RACHEL_VOICE_ID = process.env.ELEVENLABS_DEFAULT_RACHEL_ID || '21m00Tcm4TlvDq8ikWAM';
 const DEFAULT_ALICE_VOICE_ID = process.env.ELEVENLABS_DEFAULT_ALICE_ID || 'Xb7hH8MSUJpSbSDYk0k2';
+// Force the requested voice id regardless of env or name
+const FORCED_VOICE_ID = 'Xb7hH8MSUJpSbSDYk0k2';
 
 if (!ELEVEN_API_KEY) {
   console.warn('ElevenLabs API key not set. Set ELEVENLABS_API_KEY (or XI_API_KEY) in server/.env');
+} else {
+  try {
+    const masked = ELEVEN_API_KEY.length <= 8
+      ? '*'.repeat(Math.max(0, ELEVEN_API_KEY.length - 2)) + ELEVEN_API_KEY.slice(-2)
+      : ELEVEN_API_KEY.slice(0, 4) + '...' + ELEVEN_API_KEY.slice(-4);
+    console.log(`[TTS] ElevenLabs key loaded: ${masked} (len=${ELEVEN_API_KEY.length})`);
+  } catch (_) {}
 }
 
 let cachedVoices = null;
@@ -28,7 +37,7 @@ async function ensureVoices() {
   if (!ELEVEN_API_KEY) return [];
   try {
     const res = await fetchFn(`${ELEVEN_BASE_URL}/voices`, {
-      headers: { 'xi-api-key': ELEVEN_API_KEY, 'x-api-key': ELEVEN_API_KEY },
+      headers: { 'xi-api-key': ELEVEN_API_KEY },
     });
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
@@ -74,7 +83,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Missing text to synthesize.' });
     }
 
-    const voiceId = await resolveVoiceId(voiceName || 'Alice');
+    const voiceId = FORCED_VOICE_ID;
+    try { console.log(`[TTS] Request: withTimestamps=${!!withTimestamps}, model=${model_id || 'eleven_multilingual_v2'}, voiceId=${voiceId}`); } catch (_) {}
     if (!voiceId) return res.status(500).json({ message: 'No ElevenLabs voice available.' });
 
     // Align with ElevenLabs quickstart recommended model
@@ -91,7 +101,6 @@ router.post('/', async (req, res) => {
 
     const headers = {
       'xi-api-key': ELEVEN_API_KEY,
-      'x-api-key': ELEVEN_API_KEY,
       'Content-Type': 'application/json',
       ...(withTimestamps ? { 'Accept': 'application/json' } : { 'Accept': 'audio/mpeg' }),
     };
@@ -105,6 +114,7 @@ router.post('/', async (req, res) => {
     if (!ttsRes.ok) {
       const errText = await ttsRes.text().catch(() => '');
       const status = ttsRes.status || 500;
+      try { console.error(`[TTS] ElevenLabs error status=${status}: ${errText}`); } catch (_) {}
       // Fallback: if timestamps request fails due to permissions, try plain TTS once
       if (withTimestamps && (status === 401 || status === 403)) {
         try {
@@ -113,7 +123,6 @@ router.post('/', async (req, res) => {
             method: 'POST',
             headers: {
               'xi-api-key': ELEVEN_API_KEY,
-              'x-api-key': ELEVEN_API_KEY,
               'Content-Type': 'application/json',
               'Accept': 'audio/mpeg',
             },
@@ -124,6 +133,10 @@ router.post('/', async (req, res) => {
             const audio_base64 = audioBuffer.toString('base64');
             return res.status(200).json({ audio_base64, alignment: null });
           }
+          try {
+            const plainErr = await plainRes.text().catch(() => '');
+            console.error(`[TTS] ElevenLabs plain error status=${plainRes.status}: ${plainErr}`);
+          } catch (_) {}
         } catch (_) {}
       }
       if (status === 401 || status === 403) {

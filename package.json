@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@craco/craco": "^7.1.0",
+    "@elevenlabs/elevenlabs-js": "^2.10.0",
     "@monaco-editor/react": "^4.6.0",
     "assemblyai": "^4.14.2",
     "buffer": "^6.0.3",

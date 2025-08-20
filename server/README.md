@@ -18,7 +18,18 @@ cd server
 npm install
 ```
 
-2. Start the server:
+2. Configure environment variables:
+Create a file named `.env` inside the `server/` directory with your secrets. Example:
+```
+PORT=5001
+MONGODB_URI=mongodb://localhost:27017/aceai
+# ElevenLabs API key for Text-to-Speech
+ELEVENLABS_API_KEY=your_secret_elevenlabs_key
+# Optional: choose a default voice id
+# ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
+```
+
+3. Start the server:
 ```bash
 npm start
 ```
@@ -84,4 +95,14 @@ The MongoDB connection string is configured in `config/database.js`. For product
 
 ## Port
 
-The server runs on port 5000 by default. You can change this by setting the `PORT` environment variable. 
+The server runs on port 5001 by default. You can change this by setting the `PORT` environment variable. 
+
+## Text-to-Speech with ElevenLabs
+
+- This server uses ElevenLabs Text-to-Speech for interviewer dialogue.
+- Ensure your API key is configured in `server/.env` as `ELEVENLABS_API_KEY`.
+- The server sends your key in the `xi-api-key` header as required by the ElevenLabs API.
+
+Relevant docs:
+- Authentication: https://elevenlabs.io/docs/api-reference/authentication
+- Create speech with timing: https://elevenlabs.io/docs/api-reference/text-to-speech/convert-with-timestamps

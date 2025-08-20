@@ -1,4 +1,5 @@
 /* seed.js */
+require('dotenv').config();
 const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const Problem = require('./models/Problem');
@@ -238,6 +239,249 @@ const sampleProblems = [
     hidden_test_cases: [
       { input: { beginWord: "a", endWord: "c", wordList: ["a","b","c"] }, output: 2 },
       { input: { beginWord: "hot", endWord: "dog", wordList: ["hot","dog"] }, output: 0 }
+    ]
+  },
+  // === NEW PROBLEMS ===
+  {
+    problem_id: "reverse-integer",
+    title: "Reverse Integer", 
+    difficulty: "Easy",
+    description: "Given a signed 32-bit integer x, return x with its digits reversed. If reversing x causes the value to go outside the signed 32-bit integer range [-2^31, 2^31 - 1], then return 0.",
+    examples: [
+      { input: { x: 123 }, output: 321 },
+      { input: { x: -123 }, output: -321 },
+      { input: { x: 120 }, output: 21 }
+    ],
+    constraints: [
+      "-2^31 <= x <= 2^31 - 1"
+    ],
+    entry_method: "reverse",
+    starter_code: {
+      javascript: `var reverse = function(x) {\n    \n};`,
+      python: `class Solution:\n    def reverse(self, x: int) -> int:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { x: 0 }, output: 0 },
+      { input: { x: 1534236469 }, output: 0 }, // overflow case
+      { input: { x: -2147447412 }, output: -2147447412 },
+      { input: { x: 1 }, output: 1 },
+      { input: { x: -1 }, output: -1 }
+    ]
+  },
+  {
+    problem_id: "contains-duplicate",
+    title: "Contains Duplicate",
+    difficulty: "Easy", 
+    description: "Given an integer array nums, return true if any value appears at least twice in the array, and return false if every element is distinct.",
+    examples: [
+      { input: { nums: [1,2,3,1] }, output: true },
+      { input: { nums: [1,2,3,4] }, output: false },
+      { input: { nums: [1,1,1,3,3,4,3,2,4,2] }, output: true }
+    ],
+    constraints: [
+      "1 <= nums.length <= 10^5",
+      "-10^9 <= nums[i] <= 10^9"
+    ],
+    entry_method: "containsDuplicate",
+    starter_code: {
+      javascript: `var containsDuplicate = function(nums) {\n    \n};`,
+      python: `class Solution:\n    def containsDuplicate(self, nums: list[int]) -> bool:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { nums: [1] }, output: false },
+      { input: { nums: [1,2] }, output: false },
+      { input: { nums: [1,1] }, output: true },
+      { input: { nums: [0,0,0] }, output: true },
+      { input: { nums: [-1,-2,-3] }, output: false }
+    ]
+  },
+  {
+    problem_id: "maximum-subarray",
+    title: "Maximum Subarray",
+    difficulty: "Easy",
+    description: "Given an integer array nums, find the contiguous subarray (containing at least one number) which has the largest sum and return its sum.",
+    examples: [
+      { input: { nums: [-2,1,-3,4,-1,2,1,-5,4] }, output: 6 },
+      { input: { nums: [1] }, output: 1 },
+      { input: { nums: [5,4,-1,7,8] }, output: 23 }
+    ],
+    constraints: [
+      "1 <= nums.length <= 10^5",
+      "-10^4 <= nums[i] <= 10^4"
+    ],
+    entry_method: "maxSubArray",
+    starter_code: {
+      javascript: `var maxSubArray = function(nums) {\n    \n};`,
+      python: `class Solution:\n    def maxSubArray(self, nums: list[int]) -> int:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { nums: [-1] }, output: -1 },
+      { input: { nums: [-2,-1] }, output: -1 },
+      { input: { nums: [1,2,3,4,5] }, output: 15 },
+      { input: { nums: [-1,0,-2] }, output: 0 },
+      { input: { nums: [2,1,-3,4] }, output: 4 }
+    ]
+  },
+  {
+    problem_id: "group-anagrams",
+    title: "Group Anagrams",
+    difficulty: "Medium",
+    description: "Given an array of strings strs, group the anagrams together. You can return the answer in any order.",
+    examples: [
+      { input: { strs: ["eat","tea","tan","ate","nat","bat"] }, output: [["bat"],["nat","tan"],["ate","eat","tea"]] },
+      { input: { strs: [""] }, output: [[""]] },
+      { input: { strs: ["a"] }, output: [["a"]] }
+    ],
+    constraints: [
+      "1 <= strs.length <= 10^4",
+      "0 <= strs[i].length <= 100",
+      "strs[i] consists of lowercase English letters"
+    ],
+    entry_method: "groupAnagrams",
+    starter_code: {
+      javascript: `var groupAnagrams = function(strs) {\n    \n};`,
+      python: `class Solution:\n    def groupAnagrams(self, strs: list[str]) -> list[list[str]]:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { strs: ["abc","bca","cab","xyz"] }, output: [["abc","bca","cab"],["xyz"]] },
+      { input: { strs: ["ab","ba"] }, output: [["ab","ba"]] },
+      { input: { strs: ["abc","def"] }, output: [["abc"],["def"]] },
+      { input: { strs: ["a","b","c"] }, output: [["a"],["b"],["c"]] }
+    ]
+  },
+  {
+    problem_id: "3sum",
+    title: "3Sum",
+    difficulty: "Medium",
+    description: "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Notice that the solution set must not contain duplicate triplets.",
+    examples: [
+      { input: { nums: [-1,0,1,2,-1,-4] }, output: [[-1,-1,2],[-1,0,1]] },
+      { input: { nums: [] }, output: [] },
+      { input: { nums: [0] }, output: [] }
+    ],
+    constraints: [
+      "0 <= nums.length <= 3000",
+      "-10^5 <= nums[i] <= 10^5"
+    ],
+    entry_method: "threeSum",
+    starter_code: {
+      javascript: `var threeSum = function(nums) {\n    \n};`,
+      python: `class Solution:\n    def threeSum(self, nums: list[int]) -> list[list[int]]:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { nums: [0,0,0] }, output: [[0,0,0]] },
+      { input: { nums: [-2,0,1,1,2] }, output: [[-2,0,2],[-2,1,1]] },
+      { input: { nums: [1,2,-2,-1] }, output: [] },
+      { input: { nums: [-1,0,1] }, output: [[-1,0,1]] }
+    ]
+  },
+  {
+    problem_id: "product-except-self",
+    title: "Product of Array Except Self",
+    difficulty: "Medium",
+    description: "Given an integer array nums, return an array answer such that answer[i] is equal to the product of all the elements of nums except nums[i]. The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer. You must write an algorithm that runs in O(n) time and without using the division operation.",
+    examples: [
+      { input: { nums: [1,2,3,4] }, output: [24,12,8,6] },
+      { input: { nums: [-1,1,0,-3,3] }, output: [0,0,9,0,0] }
+    ],
+    constraints: [
+      "2 <= nums.length <= 10^5",
+      "-30 <= nums[i] <= 30",
+      "The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer"
+    ],
+    entry_method: "productExceptSelf",
+    starter_code: {
+      javascript: `var productExceptSelf = function(nums) {\n    \n};`,
+      python: `class Solution:\n    def productExceptSelf(self, nums: list[int]) -> list[int]:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { nums: [1,1] }, output: [1,1] },
+      { input: { nums: [0,0] }, output: [0,0] },
+      { input: { nums: [1,0] }, output: [0,1] },
+      { input: { nums: [2,3,4,5] }, output: [60,40,30,24] },
+      { input: { nums: [-1,2,-3] }, output: [-6,3,2] }
+    ]
+  },
+  {
+    problem_id: "trapping-rain-water",
+    title: "Trapping Rain Water",
+    difficulty: "Hard",
+    description: "Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.",
+    examples: [
+      { input: { height: [0,1,0,2,1,0,1,3,2,1,2,1] }, output: 6 },
+      { input: { height: [4,2,0,3,2,5] }, output: 9 }
+    ],
+    constraints: [
+      "n == height.length",
+      "1 <= n <= 2 * 10^4",
+      "0 <= height[i] <= 3 * 10^4"
+    ],
+    entry_method: "trap",
+    starter_code: {
+      javascript: `var trap = function(height) {\n    \n};`,
+      python: `class Solution:\n    def trap(self, height: list[int]) -> int:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { height: [3,0,2,0,4] }, output: 7 },
+      { input: { height: [1,2,1] }, output: 0 },
+      { input: { height: [2,1,2] }, output: 1 },
+      { input: { height: [0,2,0] }, output: 0 },
+      { input: { height: [1] }, output: 0 }
+    ]
+  },
+  {
+    problem_id: "serialize-deserialize-binary-tree",
+    title: "Serialize and Deserialize Binary Tree",
+    difficulty: "Hard",
+    description: "Design an algorithm to serialize and deserialize a binary tree. Serialization is the process of converting a data structure into a sequence of bits so that it can be stored or transmitted and reconstructed later. For this problem, implement encode and decode functions that convert a binary tree to/from a string representation.",
+    examples: [
+      { input: { data: "[1,2,3,null,null,4,5]" }, output: "[1,2,3,null,null,4,5]" },
+      { input: { data: "[]" }, output: "[]" }
+    ],
+    constraints: [
+      "The number of nodes in the tree is in the range [0, 10^4]",
+      "-1000 <= Node.val <= 1000"
+    ],
+    entry_method: "codec",
+    starter_code: {
+      javascript: `var serialize = function(root) {\n    \n};\n\nvar deserialize = function(data) {\n    \n};`,
+      python: `class Codec:\n    def serialize(self, root):\n        pass\n        \n    def deserialize(self, data):\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { data: "[1]" }, output: "[1]" },
+      { input: { data: "[1,2]" }, output: "[1,2]" },
+      { input: { data: "[1,null,2]" }, output: "[1,null,2]" },
+      { input: { data: "[5,2,3,null,null,2,4,3,1]" }, output: "[5,2,3,null,null,2,4,3,1]" }
+    ]
+  },
+  {
+    problem_id: "median-two-sorted-arrays",
+    title: "Median of Two Sorted Arrays",
+    difficulty: "Hard", 
+    description: "Given two sorted arrays nums1 and nums2 of size m and n respectively, return the median of the two sorted arrays. The overall run time complexity should be O(log (m+n)).",
+    examples: [
+      { input: { nums1: [1,3], nums2: [2] }, output: 2.0 },
+      { input: { nums1: [1,2], nums2: [3,4] }, output: 2.5 }
+    ],
+    constraints: [
+      "nums1.length == m",
+      "nums2.length == n", 
+      "0 <= m <= 1000",
+      "0 <= n <= 1000",
+      "1 <= m + n <= 2000",
+      "-10^6 <= nums1[i], nums2[i] <= 10^6"
+    ],
+    entry_method: "findMedianSortedArrays",
+    starter_code: {
+      javascript: `var findMedianSortedArrays = function(nums1, nums2) {\n    \n};`,
+      python: `class Solution:\n    def findMedianSortedArrays(self, nums1: list[int], nums2: list[int]) -> float:\n        pass`
+    },
+    hidden_test_cases: [
+      { input: { nums1: [], nums2: [1] }, output: 1.0 },
+      { input: { nums1: [1], nums2: [] }, output: 1.0 },
+      { input: { nums1: [0,0], nums2: [0,0] }, output: 0.0 },
+      { input: { nums1: [1,3], nums2: [2,7] }, output: 2.5 },
+      { input: { nums1: [1,2,3], nums2: [4,5,6] }, output: 3.5 }
     ]
   }
 ];

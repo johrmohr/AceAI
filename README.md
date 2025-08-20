@@ -29,6 +29,8 @@ MONGODB_URI=mongodb+srv://...
 PORT=5001
 AZURE_SPEECH_KEY=your_azure_key
 AZURE_SPEECH_REGION=your_region
+# ElevenLabs API key for TTS
+ELEVENLABS_API_KEY=your_secret_elevenlabs_key
 ```
 
 3) Seed problems
